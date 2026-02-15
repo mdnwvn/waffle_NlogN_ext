@@ -283,7 +283,7 @@ if (GENERATE_THRIFT)
     add_dependencies(thriftcompiler thrift)
 endif ()
 
-set(CPP_REDIS_CXX_FLAGS "${EXTERNAL_CXX_FLAGS}")
+set(CPP_REDIS_CXX_FLAGS "${EXTERNAL_CXX_FLAGS} -include thread")
 set(CPP_REDIS_C_FLAGS "${EXTERNAL_C_FLAGS}")
 set(CPP_REDIS_PREFIX "${PROJECT_BINARY_DIR}/external/cpp_redis")
 set(CPP_REDIS_HOME "${CPP_REDIS_PREFIX}")
