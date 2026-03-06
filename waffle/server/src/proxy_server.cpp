@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
     int o;
     int waffle_port = PROXY_PORT;
     std::string proxy_type_ = "waffle";
-    while ((o = getopt(argc, argv, "h:p:s:n:v:b:c:t:o:d:z:q:l:m:r:y:f:a:0")) != -1) {
+    while ((o = getopt(argc, argv, "h:p:s:n:v:b:c:t:o:d:z:q:l:m:r:y:f:a:0:")) != -1) {
         switch (o) {
             case 'h':
                 dynamic_cast<waffle_proxy&>(*proxy_).server_host_name_ = std::string(optarg);

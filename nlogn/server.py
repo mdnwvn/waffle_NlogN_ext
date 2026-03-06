@@ -111,8 +111,8 @@ def initNLN(sets: int):
     levelMapPath = pathlib.Path("./NLNTraceFiles/level_map.txt").resolve()
     lmap_handle: subprocess.Popen = subprocess.Popen(
         [
-            wafflePath,
-            "-l",  levelMapPath,
+            str(wafflePath),
+            "-l",  str(levelMapPath),
             "-r", "800",
             "-f", "100",
             "-d", "100000",
@@ -120,6 +120,7 @@ def initNLN(sets: int):
             "-n", "1",
             "-h", redisHost,
             "-p", str(redisPort),
+            "-0", "9080"
         ]
     )
     level_handles: [subprocess.Popen] = []
@@ -131,8 +132,8 @@ def initNLN(sets: int):
         level_handles.append(
             subprocess.Popen(
                     [
-                        wafflePath,
-                        "-l",  levelPath,
+                        str(wafflePath),
+                        "-l",  str(levelPath),
                         "-r", "800",
                         "-f", "100",
                         "-d", "100000",
