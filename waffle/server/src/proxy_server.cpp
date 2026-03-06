@@ -64,6 +64,7 @@ void usage() {
     // Other parameters
     std::cout << "\t -o: Output location for sizing thread\n";
     std::cout << "\t -d: Core to run on\n";
+    std::cout << "\t -0: Port to expose proxy Thrift server on\n";
 };
 
 int main(int argc, char *argv[]) {
@@ -74,8 +75,9 @@ int main(int argc, char *argv[]) {
 
     std::shared_ptr<proxy> proxy_ = std::make_shared<waffle_proxy>();
     int o;
+    int waffle_port = PROXY_PORT;
     std::string proxy_type_ = "waffle";
-    while ((o = getopt(argc, argv, "h:p:s:n:v:b:c:t:o:d:z:q:l:m:r:y:f:a")) != -1) {
+    while ((o = getopt(argc, argv, "h:p:s:n:v:b:c:t:o:d:z:q:l:m:r:y:f:a:0")) != -1) {
         switch (o) {
             case 'h':
                 dynamic_cast<waffle_proxy&>(*proxy_).server_host_name_ = std::string(optarg);
@@ -125,6 +127,9 @@ int main(int argc, char *argv[]) {
             case 'r':
                 dynamic_cast<waffle_proxy&>(*proxy_).R = std::atoi(optarg);
                 break;
+            case '0':
+                waffle_port = std::atoi(optarg);
+                break;
             default:
                 usage();
                 exit(-1);
@@ -143,7 +148,7 @@ int main(int argc, char *argv[]) {
     std::cout <<"Initializing Waffle" << std::endl;
     dynamic_cast<waffle_proxy&>(*proxy_).init(keys, values, arguments);
     std::cout << "Initialized Waffle" << std::endl;
-    auto proxy_server = thrift_server::create(proxy_, "waffle", id_to_client, PROXY_PORT, 1);
+    auto proxy_server = thrift_server::create(proxy_, "waffle", id_to_client, waffle_port, 1);
     std::thread proxy_serve_thread([&proxy_server] { proxy_server->serve(); });
     std::cout << "Proxy server is reachable" << std::endl;
     sleep(250);
