@@ -3,6 +3,7 @@ import math
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
+import subprocess
 
 
 # Wrapper class for a temporary set
@@ -42,7 +43,7 @@ def getSize(path: str) -> int:
     return size
 
 
-def splitDB(path: str, size: int) -> None:
+def splitDB(path: str, size: int) -> int:
     setCount: int = findPow2(size)
 
     lookup = Set(-1)  # The level of the lookup table doesn't matter
@@ -65,12 +66,12 @@ def splitDB(path: str, size: int) -> None:
             sizebin = findPow2(len(str(parts[2]).strip()))
 
             # Add the k-v pair to the appropriate level
-            sets[sizebin].append(
-                parts[1], str(parts[2]).strip().ljust(2**sizebin, "█")
-            )
-            # print(sets[sizebin].records[-1])
+            sets[sizebin].append(parts[1], str(parts[2]).strip().ljust(2**sizebin, "█"))
+
             # Add the key to the lookup set.
-            lookup.append(parts[1], sizebin)
+            # We need to pad this otherwise we leak whether we've
+            # accessed a 1-digit or 2-digit level.
+            lookup.append(parts[1], str(sizebin).strip().ljust(4, "█"))
 
             # // Debug and plotting code //
             # print(f"{findPow2(len(parts[2]))} | {parts[2]}")
@@ -79,13 +80,13 @@ def splitDB(path: str, size: int) -> None:
     # Generate the tracefile for each level
     # TODO: Add a single dummy element for empty levels, either here or later, so waffle can generate the proper dummies.
     for i, s in enumerate(sets):
-        with open(f"./NLNTraceFiles/level_{i}.txt", "w+",encoding='utf-8') as f:
+        with open(f"./NLNTraceFiles/level_{i}.txt", "w+", encoding="utf-8") as f:
             for t in sets[i].records:
                 f.write(f"SET {t['key']} {t['value']}\n")
             print(sets[i].level)
 
     # Generate the index tracefile
-    with open(f"./NLNTraceFiles/level_map.txt", "w+",encoding='utf-8') as f:
+    with open(f"./NLNTraceFiles/level_map.txt", "w+", encoding="utf-8") as f:
         for t in lookup.records:
             f.write(f"SET {t['key']} {t['value']}\n")
 
@@ -96,10 +97,63 @@ def splitDB(path: str, size: int) -> None:
     # print("Writing plot to file.")
     # plt.savefig("./dbdistrib.png")
 
-    return
+    return setCount
 
 
-def initNLN():
+def initNLN(sets: int):
+
+    wafflePath = pathlib.Path("../waffle/bin/proxy_server").resolve()
+    waffleStartPort = 9090
+
+    redisHost = "127.0.0.1"
+    redisPort = 6379
+
+    levelMapPath = pathlib.Path("./NLNTraceFiles/level_map.txt").resolve()
+    lmap_handle: subprocess.Popen = subprocess.Popen(
+        [
+            wafflePath,
+            "-l",  levelMapPath,
+            "-r", "800",
+            "-f", "100",
+            "-d", "100000",
+            "-c", "3",
+            "-n", "1",
+            "-h", redisHost,
+            "-p", str(redisPort),
+        ]
+    )
+    level_handles: [subprocess.Popen] = []
+
+    for i in range(0, sets + 1):
+
+        levelPath = pathlib.Path(f"./NLNTraceFiles/level_{i}.txt").resolve()
+        print(f"Starting level {i}")
+        level_handles.append(
+            subprocess.Popen(
+                    [
+                        wafflePath,
+                        "-l",  levelPath,
+                        "-r", "800",
+                        "-f", "100",
+                        "-d", "100000",
+                        "-c", "3",
+                        "-n", "1",
+                        "-h", redisHost,
+                        "-p", str(redisPort),
+                        "-0", str(waffleStartPort + i)
+                    ]
+                )
+            
+            )
+
+    #TODO: figure out why only the first spawned proxy server runs
+    # and why it dies after a few seconds. Worst case, we have to
+    # switch from a normal subprocess to something else.
+    print(lmap_handle.pid)
+    for p in level_handles:
+        print(p.pid)
+    input("Press Enter to continue...")
+
     return
 
 
@@ -109,10 +163,13 @@ def main() -> int:
     dbPath = pathlib.Path("./DBTraceFiles/serverInput.txt").resolve()
 
     dbSize: int = getSize(dbPath)  # Get the size of the database in bytes
-    splitDB(dbPath, dbSize)  # Split the DB into logN levels
-    initNLN()  # Initialize each Waffle instance
+    sets: int = splitDB(dbPath, dbSize)  # Split the DB into logN levels
 
-    # TODO: Create a Thrift interface for benchmarking
+    initNLN(sets)  # Initialize each Waffle instance
+
+    # TODO: Create a Thrift interface
+
+
 
     return 0
 
