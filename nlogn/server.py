@@ -5,6 +5,47 @@ import matplotlib.pyplot as plt
 import numpy as np
 import subprocess
 import os
+import asyncio
+
+# Thift server imports
+from proxy import waffle_thrift
+from proxy import waffle_thrift_response
+from proxy import ttypes
+from thrift.transport import TSocket
+from thrift.transport import TTransport
+from thrift.protocol import TBinaryProtocol
+from thrift.server import TServer
+
+# Thrift client imports
+from proxy.waffle_thrift import Client
+from proxy.waffle_thrift import sequence_id
+
+wafflePath = pathlib.Path("../waffle/bin/proxy_server").resolve()
+waffleHost = "127.0.0.1"
+waffleStartPort = 9090
+
+redisHost = "127.0.0.1"
+redisPort = 6379
+
+
+# Class to help with managing waffle instances.
+class Handle:
+    def __init__(
+        self, used: bool = False, handle: subprocess.Popen = None, port: int = None
+    ):
+        self.used = used
+        if used:
+            self.handle = handle
+        self.client: Client = None
+        self.port = port
+
+
+handles: [Handle] = []
+#num_handles = 0
+
+levelMap: Handle 
+
+event_loop = asyncio.get_event_loop()
 
 
 # Wrapper class for a temporary set
@@ -103,29 +144,35 @@ def splitDB(path: str, size: int) -> int:
 
 def initNLN(sets: int):
 
-    wafflePath = pathlib.Path("../waffle/bin/proxy_server").resolve()
-    waffleStartPort = 9090
-
-    redisHost = "127.0.0.1"
-    redisPort = 6379
-
     levelMapPath = pathlib.Path("./NLNTraceFiles/level_map.txt").resolve()
-    lmap_handle: subprocess.Popen = subprocess.Popen(
-        [
-            str(wafflePath),
-            "-l",  str(levelMapPath),
-            "-r", "800",
-            "-f", "100",
-            "-d", "100",
-            "-c", "3",
-            "-n", "2", # num cores
-            "-h", redisHost,
-            "-p", str(redisPort),
-            "-0", "9080"
-        ]
+    levelMap = Handle(
+        used=True,
+        handle=subprocess.Popen(
+            [
+                str(wafflePath),
+                "-l",
+                str(levelMapPath),
+                "-r",
+                "800",
+                "-f",
+                "100",
+                "-d",
+                "100",
+                "-c",
+                "3",
+                "-n",
+                "2",  # num cores
+                "-h",
+                redisHost,
+                "-p",
+                str(redisPort),
+                "-0",
+                "9080",
+            ],
+            stdout = subprocess.PIPE
+        ),
+        port= 9080
     )
-    level_handles: [subprocess.Popen] = []
-
     for i in range(0, sets + 1):
 
         levelPath = pathlib.Path(f"./NLNTraceFiles/level_{i}.txt").resolve()
@@ -135,56 +182,198 @@ def initNLN(sets: int):
             # save memory on our machines, rather than filling them with dummy elements.
             print(f"Starting level {i}")
             if len(fp.read(1)) == 0:
-                print('FILE IS EMPTY')
+                print("FILE IS EMPTY")
+                handles.append(Handle(False, None, None))
             else:
-                print(f"level {i} has {str(2**(sets+ 1 - i) - len(fp.readlines()))} dummies")
-                level_handles.append(
-                    subprocess.Popen(
+                print(
+                    f"level {i} has {str(2**(sets+ 1 - i) - len(fp.readlines()))} dummies"
+                )
+
+                handles.append(
+                    Handle(
+                        True,
+                        subprocess.Popen(
                             [
                                 str(wafflePath),
-                                "-l",  str(levelPath),
-                                "-r", "800",
-                                "-f", "100",
-                                "-d", str(2**(sets+ 1 - i) - len(fp.readlines())),
-                                "-c", "2",
-                                "-n", "2", # num cores
-                                "-h", redisHost,
-                                "-p", str(redisPort),
-                                "-0", str(waffleStartPort + i)
-                            ]
-                        )
-                    
-                    )  
+                                "-l",
+                                str(levelPath),
+                                "-r",
+                                "800",
+                                "-f",
+                                "100",
+                                "-d",
+                                str(2 ** (sets + 1 - i) - len(fp.readlines())),
+                                "-c",
+                                "2",
+                                "-n",
+                                "2",  # num cores
+                                "-h",
+                                redisHost,
+                                "-p",
+                                str(redisPort),
+                                "-0",
+                                str(waffleStartPort + i),
+                            ],
+                            stdout = subprocess.PIPE
+                        ),
+                        waffleStartPort + i,
+                    )
+                )
 
-    #TODO: figure out why only the first spawned proxy server runs
+    # TODO: figure out why only the first spawned proxy server runs
     # and why it dies after a few seconds. Worst case, we have to
     # switch from a normal subprocess to something else.
-    print(lmap_handle.pid)
-    for p in level_handles:
-        print(p.pid)
+    print(levelMap.handle.pid)
+    for p in handles:
+        if p.used:
+            print(p.handle.pid)
+
+    return levelMap
+__HOST = "localhost"
+__PORT = 7080
 
 
-def main() -> int:
+class ProxyHandler(object):
+    def get_client_id(self):
+        pass
+
+    def register_client_id(self, block_id, client_id):
+        """
+        Parameters:
+         - block_id
+         - client_id
+
+        """
+        pass
+
+    def async_get(self, seq_id, key):
+        """
+        Parameters:
+         - seq_id
+         - key
+
+        """
+        pass
+
+    def async_put(self, seq_id, key, value):
+        """
+        Parameters:
+         - seq_id
+         - key
+         - value
+
+        """
+        pass
+
+    def async_get_batch(self, seq_id, keys):
+        """
+        Parameters:
+         - seq_id
+         - keys
+
+        """
+        pass
+
+    def async_put_batch(self, seq_id, keys, values):
+        """
+        Parameters:
+         - seq_id
+         - keys
+         - values
+
+        """
+        pass
+
+    def get(self, key):
+        print(key)
+        """
+        Parameters:
+         - key
+
+        """
+
+        return
+
+    def put(self, key, value):
+        """
+        Parameters:
+         - key
+         - value
+
+        """
+        return
+
+    def get_batch(self, keys: [str]):
+        """
+        Parameters:
+         - keys
+
+        """
+        return [""]
+
+    def put_batch(self, keys: [str], values: [str]):
+        """
+        Parameters:
+         - keys
+         - values
+
+        """
+        pass
+
+
+def makeClient(port: int) -> Client:
+    tsocket = TSocket.TSocket(waffleHost, port)
+    transport = TTransport.TFramedTransport(tsocket)
+    protocol = TBinaryProtocol.TBinaryProtocol(transport)
+    transport.open()
+    return Client(protocol)
+
+if __name__ == "__main__":
 
     # Input tracefile path
-    #dbPath = pathlib.Path("./DBTraceFiles/serverInput.txt").resolve()
-    dbPath = pathlib.Path("../waffle/tracefiles/0.99/workloada/proxy_server_command_line_input.txt").resolve()
+    # dbPath = pathlib.Path("./DBTraceFiles/serverInput.txt").resolve()
+    dbPath = pathlib.Path(
+        "../waffle/tracefiles/0.99/workloada/proxy_server_command_line_input.txt"
+    ).resolve()
 
     dbSize: int = getSize(dbPath)  # Get the size of the database in bytes
     sets: int = splitDB(dbPath, dbSize)  # Split the DB into logN levels
 
-    initNLN(sets)  # Initialize each Waffle instance
+    levelMap = initNLN(sets)  # Initialize each Waffle instance
+
+    print(f"Waiting for Level map")
+    while True:
+        line = levelMap.handle.stdout.readline()
+        #print (line)
+        if line == b'Proxy server is reachable\n':
+            print("Level map ready")
+            levelMap.client = makeClient(levelMap.port)
+
+            #print(levelMap.client.get("user7997323107739036606"))
+            break
+        pass
+
+    for i, p in enumerate(handles):
+        print(f"Waiting for Level {i}")
+        if p.used == False:
+            print(f"Level {i} is unused")
+            continue
+        while True:
+            line = p.handle.stdout.readline()
+            #print (line)
+            if line == b'Proxy server is reachable\n':
+                print(f"Level {i} ready")
+                break
+            pass
 
     # TODO: Create a Thrift interface
-
-    nlnPort: int = 10000
-
-
+    handler = ProxyHandler
+    processor = waffle_thrift.Processor(handler)
+    transport = TSocket.TServerSocket(__HOST, __PORT)
+    tfactory = TTransport.TFramedTransportFactory()
+    pfactory = TBinaryProtocol.TBinaryProtocolFactory()
+    rpcServer = TServer.TSimpleServer(processor, transport, tfactory, pfactory)
+    print("Starting the rpc server at", __HOST, ":", __PORT)
+    rpcServer.serve()
 
     input("Press Enter to continue...")
-
-    return
-    return 0
-
-
-main()

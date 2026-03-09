@@ -216,7 +216,7 @@ void waffle_proxy::init(const std::vector<std::string> &keys, const std::vector<
     
     ticks_per_ns = static_cast<double>(rdtscuhzProxy()) / 1000;
 
-    std::cout << "Successfully initialized waffle with keys size " << keys.size() << " and cache with " << cache.size() << " Fake keys size is " << D << " batch size is " << B << " F is" << F << " FakeBST size is " << fakeBst.size() << std::endl;
+    std::cout << "Successfully initialized waffle with keys size " << keys.size() << " and cache with " << cache.size() << std::endl << " Fake keys size is " << D << std::endl << " batch size is " << B << std::endl << " F is" << F << std::endl << " FakeBST size is " << fakeBst.size() << std::endl;
 }
 
 void waffle_proxy::create_security_batch(std::shared_ptr<queue <std::pair<operation, std::shared_ptr<std::promise<std::string>>>>> &op_queue,
