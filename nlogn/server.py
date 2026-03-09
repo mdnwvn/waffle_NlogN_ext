@@ -4,6 +4,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 import subprocess
+import os
 
 
 # Wrapper class for a temporary set
@@ -115,9 +116,9 @@ def initNLN(sets: int):
             "-l",  str(levelMapPath),
             "-r", "800",
             "-f", "100",
-            "-d", "100000",
+            "-d", "100",
             "-c", "3",
-            "-n", "1",
+            "-n", "2", # num cores
             "-h", redisHost,
             "-p", str(redisPort),
             "-0", "9080"
@@ -128,24 +129,32 @@ def initNLN(sets: int):
     for i in range(0, sets + 1):
 
         levelPath = pathlib.Path(f"./NLNTraceFiles/level_{i}.txt").resolve()
-        print(f"Starting level {i}")
-        level_handles.append(
-            subprocess.Popen(
-                    [
-                        str(wafflePath),
-                        "-l",  str(levelPath),
-                        "-r", "800",
-                        "-f", "100",
-                        "-d", "100000",
-                        "-c", "3",
-                        "-n", "1",
-                        "-h", redisHost,
-                        "-p", str(redisPort),
-                        "-0", str(waffleStartPort + i)
-                    ]
-                )
-            
-            )
+        with open(levelPath, "r") as fp:
+
+            # We are intentionally throwing out empty levels in an effort to
+            # save memory on our machines, rather than filling them with dummy elements.
+            print(f"Starting level {i}")
+            if len(fp.read(1)) == 0:
+                print('FILE IS EMPTY')
+            else:
+                print(f"level {i} has {str(2**(sets+ 1 - i) - len(fp.readlines()))} dummies")
+                level_handles.append(
+                    subprocess.Popen(
+                            [
+                                str(wafflePath),
+                                "-l",  str(levelPath),
+                                "-r", "800",
+                                "-f", "100",
+                                "-d", str(2**(sets+ 1 - i) - len(fp.readlines())),
+                                "-c", "2",
+                                "-n", "2", # num cores
+                                "-h", redisHost,
+                                "-p", str(redisPort),
+                                "-0", str(waffleStartPort + i)
+                            ]
+                        )
+                    
+                    )  
 
     #TODO: figure out why only the first spawned proxy server runs
     # and why it dies after a few seconds. Worst case, we have to
@@ -153,15 +162,13 @@ def initNLN(sets: int):
     print(lmap_handle.pid)
     for p in level_handles:
         print(p.pid)
-    input("Press Enter to continue...")
-
-    return
 
 
 def main() -> int:
 
     # Input tracefile path
-    dbPath = pathlib.Path("./DBTraceFiles/serverInput.txt").resolve()
+    #dbPath = pathlib.Path("./DBTraceFiles/serverInput.txt").resolve()
+    dbPath = pathlib.Path("../waffle/tracefiles/0.99/workloada/proxy_server_command_line_input.txt").resolve()
 
     dbSize: int = getSize(dbPath)  # Get the size of the database in bytes
     sets: int = splitDB(dbPath, dbSize)  # Split the DB into logN levels
@@ -170,8 +177,13 @@ def main() -> int:
 
     # TODO: Create a Thrift interface
 
+    nlnPort: int = 10000
 
 
+
+    input("Press Enter to continue...")
+
+    return
     return 0
 
 
