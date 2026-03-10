@@ -1,5 +1,7 @@
 namespace py proxy
 
+include "shared.thrift"
+
 struct sequence_id {
   1: required i64 client_id,
   2: required i64 client_seq_no,

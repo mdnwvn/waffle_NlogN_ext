@@ -7,25 +7,25 @@ import subprocess
 import os
 import asyncio
 
-# Thift server imports
-from proxy import waffle_thrift
-from proxy import waffle_thrift_response
-from proxy import ttypes
-from thrift.transport import TSocket
-from thrift.transport import TTransport
-from thrift.protocol import TBinaryProtocol
-from thrift.server import TServer
-
-# Thrift client imports
-from proxy.waffle_thrift import Client
-from proxy.waffle_thrift import sequence_id
-
-wafflePath = pathlib.Path("../waffle/bin/proxy_server").resolve()
-waffleHost = "127.0.0.1"
-waffleStartPort = 9090
-
-redisHost = "127.0.0.1"
-redisPort = 6379
+## Thift server imports
+#from proxy import waffle_thrift
+#from proxy import waffle_thrift_response
+#from proxy import ttypes
+#from thrift.transport import TSocket
+#from thrift.transport import TTransport
+#from thrift.protocol import TBinaryProtocol
+#from thrift.server import TServer
+#
+## Thrift client imports
+#from proxy.waffle_thrift import Client
+#from proxy.waffle_thrift import sequence_id
+#
+#wafflePath = pathlib.Path("../waffle/bin/proxy_server").resolve()
+#waffleHost = "127.0.0.1"
+#waffleStartPort = 9090
+#
+#redisHost = "127.0.0.1"
+#redisPort = 6379
 
 
 # Class to help with managing waffle instances.
@@ -233,100 +233,100 @@ __HOST = "localhost"
 __PORT = 7080
 
 
-class ProxyHandler(object):
-    def get_client_id(self):
-        pass
+#class ProxyHandler(object):
+#    def get_client_id(self):
+#        pass
+#
+#    def register_client_id(self, block_id, client_id):
+#        """
+#        Parameters:
+#         - block_id
+#         - client_id
+#
+#        """
+#        pass
+#
+#    def async_get(self, seq_id, key):
+#        """
+#        Parameters:
+#         - seq_id
+#         - key
+#
+#        """
+#        pass
+#
+#    def async_put(self, seq_id, key, value):
+#        """
+#        Parameters:
+#         - seq_id
+#         - key
+#         - value
+#
+#        """
+#        pass
+#
+#    def async_get_batch(self, seq_id, keys):
+#        """
+#        Parameters:
+#         - seq_id
+#         - keys
+#
+#        """
+#        pass
+#
+#    def async_put_batch(self, seq_id, keys, values):
+#        """
+#        Parameters:
+#         - seq_id
+#         - keys
+#         - values
+#
+#        """
+#        pass
+#
+#    def get(self, key):
+#        print(key)
+#        """
+#        Parameters:
+#         - key
+#
+#        """
+#
+#        return
+#
+#    def put(self, key, value):
+#        """
+#        Parameters:
+#         - key
+#         - value
+#
+#        """
+#        return
+#
+#    def get_batch(self, keys: [str]):
+#        """
+#        Parameters:
+#         - keys
+#
+#        """
+#        return [""]
+#
+#    def put_batch(self, keys: [str], values: [str]):
+#        """
+#        Parameters:
+#         - keys
+#         - values
+#
+#        """
+#        pass
 
-    def register_client_id(self, block_id, client_id):
-        """
-        Parameters:
-         - block_id
-         - client_id
 
-        """
-        pass
-
-    def async_get(self, seq_id, key):
-        """
-        Parameters:
-         - seq_id
-         - key
-
-        """
-        pass
-
-    def async_put(self, seq_id, key, value):
-        """
-        Parameters:
-         - seq_id
-         - key
-         - value
-
-        """
-        pass
-
-    def async_get_batch(self, seq_id, keys):
-        """
-        Parameters:
-         - seq_id
-         - keys
-
-        """
-        pass
-
-    def async_put_batch(self, seq_id, keys, values):
-        """
-        Parameters:
-         - seq_id
-         - keys
-         - values
-
-        """
-        pass
-
-    def get(self, key):
-        print(key)
-        """
-        Parameters:
-         - key
-
-        """
-
-        return
-
-    def put(self, key, value):
-        """
-        Parameters:
-         - key
-         - value
-
-        """
-        return
-
-    def get_batch(self, keys: [str]):
-        """
-        Parameters:
-         - keys
-
-        """
-        return [""]
-
-    def put_batch(self, keys: [str], values: [str]):
-        """
-        Parameters:
-         - keys
-         - values
-
-        """
-        pass
-
-
-def makeClient(port: int) -> Client:
-    tsocket = TSocket.TSocket(waffleHost, port)
-    transport = TTransport.TFramedTransport(tsocket)
-    protocol = TBinaryProtocol.TBinaryProtocol(transport)
-    transport.open()
-    return Client(protocol)
+# def makeClient(port: int) -> Client:
+#     tsocket = TSocket.TSocket(waffleHost, port)
+#     transport = TTransport.TFramedTransport(tsocket)
+#     protocol = TBinaryProtocol.TBinaryProtocol(transport)
+#     transport.open()
+#     return Client(protocol)
 
 if __name__ == "__main__":
 
@@ -347,7 +347,7 @@ if __name__ == "__main__":
         #print (line)
         if line == b'Proxy server is reachable\n':
             print("Level map ready")
-            levelMap.client = makeClient(levelMap.port)
+            #levelMap.client = makeClient(levelMap.port)
 
             #print(levelMap.client.get("user7997323107739036606"))
             break
@@ -367,13 +367,13 @@ if __name__ == "__main__":
             pass
 
     # TODO: Create a Thrift interface
-    handler = ProxyHandler
-    processor = waffle_thrift.Processor(handler)
-    transport = TSocket.TServerSocket(__HOST, __PORT)
-    tfactory = TTransport.TFramedTransportFactory()
-    pfactory = TBinaryProtocol.TBinaryProtocolFactory()
-    rpcServer = TServer.TSimpleServer(processor, transport, tfactory, pfactory)
-    print("Starting the rpc server at", __HOST, ":", __PORT)
-    rpcServer.serve()
-
+#    handler = ProxyHandler
+#    processor = waffle_thrift.Processor(handler)
+#    transport = TSocket.TServerSocket(__HOST, __PORT)
+#    tfactory = TTransport.TFramedTransportFactory()
+#    pfactory = TBinaryProtocol.TBinaryProtocolFactory()
+#    rpcServer = TServer.TSimpleServer(processor, transport, tfactory, pfactory)
+#    print("Starting the rpc server at", __HOST, ":", __PORT)
+#    rpcServer.serve()
+#
     input("Press Enter to continue...")
