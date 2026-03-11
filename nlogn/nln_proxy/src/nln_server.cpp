@@ -2,7 +2,7 @@
 // You should copy it to another filename to avoid overwriting it.
 
 #include "waffle_thrift.h"
-#include "nln_actor.h"
+#include "nln_proxy.h"
 
 #include "waffle/util.h"
 #include "waffle/thrift_response_client_map.h"
@@ -56,20 +56,21 @@ class waffle_thriftHandler : virtual public waffle_thriftIf
 public:
   waffle_thriftHandler(std::atomic<int64_t> &client_id_gen,
                        std::shared_ptr<::apache::thrift::protocol::TProtocol> prot,
-                       std::shared_ptr<thrift_response_client_map> &id_to_client) : prot_(std::move(prot)),
-                                                                                    client_(std::make_shared<thrift_response_client>(prot_)),
-                                                                                    registered_client_id_(-1),
-                                                                                    client_id_gen_(client_id_gen),
-                                                                                    id_to_client_(id_to_client)
+                       std::shared_ptr<thrift_response_client_map> &id_to_client, std::shared_ptr<nln_proxy> proxy) : prot_(std::move(prot)),
+                                                                                                                      client_(std::make_shared<thrift_response_client>(prot_)),
+                                                                                                                      registered_client_id_(-1),
+                                                                                                                      client_id_gen_(client_id_gen),
+                                                                                                                      id_to_client_(id_to_client)
   {
-    // Your initialization goes here
+
+    proxy_ = proxy;
   }
 
   int64_t get_client_id()
   {
-     auto value = client_id_gen_.fetch_add(1L);
+    auto value = client_id_gen_.fetch_add(1L);
     std::cout << "In thrift_handler, client ID is " << value << std::endl;
-    return value;    
+    return value;
   }
 
   void register_client_id(const int32_t block_id, const int64_t client_id)
@@ -94,6 +95,7 @@ public:
   void async_get_batch(const sequence_id &seq_id, const std::vector<std::string> &keys)
   {
     // Your implementation goes here
+    proxy_->async_get_batch(seq_id, operation_count_++, keys);
     printf("async_get_batch\n");
   }
 
@@ -132,7 +134,9 @@ public:
   }
 
 private:
+  int operation_count_ = 0;
   std::shared_ptr<::apache::thrift::protocol::TProtocol> prot_;
+  std::shared_ptr<nln_proxy> proxy_;
   std::shared_ptr<thrift_response_client> client_;
   int64_t registered_client_id_;
   std::atomic<int64_t> &client_id_gen_;
@@ -142,10 +146,11 @@ private:
 class WaffleCloneFactory : virtual public waffle_thriftIfFactory
 {
 public:
-  WaffleCloneFactory(std::shared_ptr<thrift_response_client_map> id_to_client)
+  WaffleCloneFactory(std::shared_ptr<thrift_response_client_map> id_to_client, std::shared_ptr<nln_proxy> proxy)
   {
 
     id_to_client_ = id_to_client;
+    proxy_ = proxy;
   };
   waffle_thriftIf *getHandler(const ::apache::thrift::TConnectionInfo &connInfo) override
   {
@@ -161,7 +166,7 @@ public:
     auto transport = std::make_shared<TFramedTransport>(connInfo.transport);
     std::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
 
-    return new waffle_thriftHandler(client_id_gen_, protocol, id_to_client_);
+    return new waffle_thriftHandler(client_id_gen_, protocol, id_to_client_, proxy_);
   }
   void releaseHandler(waffle_thriftIf *handler) override
   {
@@ -172,6 +177,7 @@ public:
 private:
   std::shared_ptr<thrift_response_client_map> id_to_client_;
   std::atomic<int64_t> client_id_gen_;
+  std::shared_ptr<nln_proxy> proxy_;
 };
 
 int main(int argc, char **argv)
@@ -179,9 +185,15 @@ int main(int argc, char **argv)
   int port = 9090;
   int num_threads = 4;
 
+  std::shared_ptr<nln_proxy> proxy_ = std::make_shared<nln_proxy>();
+
   auto id_to_client = std::make_shared<thrift_response_client_map>();
 
-  auto clone_factory = std::make_shared<WaffleCloneFactory>(id_to_client);
+  void *arguments[1];
+  arguments[0] = &id_to_client;
+  dynamic_cast<nln_proxy &>(*proxy_).init(arguments);
+
+  auto clone_factory = std::make_shared<WaffleCloneFactory>(id_to_client, proxy_);
   auto proc_factory = std::make_shared<waffle_thriftProcessorFactory>(clone_factory);
   auto socket = std::make_shared<TNonblockingServerSocket>(port);
   socket->setSendTimeout(1200000);

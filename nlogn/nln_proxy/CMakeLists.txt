@@ -25,8 +25,8 @@ include(Dependencies)
 add_executable( 
     nln_server
     src/nln_server.cpp
-    src/nln_actor.cpp
-    src/nln_actor.h
+    src/nln_proxy.cpp
+    src/nln_proxy.h
 
     src/proxy_constants.cpp
     src/proxy_constants.h
@@ -39,6 +39,8 @@ add_executable(
 
     src/waffle/util.h
     src/waffle/util.cpp
+    src/waffle/queue.h
+    src/waffle/operation.h
 
     src/waffle/thrift_response_client.cpp
     src/waffle/thrift_response_client.h
