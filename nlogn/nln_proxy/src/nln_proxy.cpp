@@ -60,11 +60,14 @@ void nln_proxy::create_security_batch(std::shared_ptr<WaffleQueue::queue<std::pa
         struct operation operat;
         auto operation_promise_pair = op_queue->pop();
         auto currentKey = operation_promise_pair.first.key;
+        //std::cout << operation_promise_pair.first.value << std::endl;
         if (operation_promise_pair.first.value == "")
         {
             //printf("hi\n");
 
+            //TODO: actually call a backend server to get the values.
             operation_promise_pair.second->set_value("test");
+
             // It's a GET request
             // bool isPresentInCache = false;
             // auto val = cache.getValueWithoutPositionChangeNew(currentKey, isPresentInCache);
@@ -84,6 +87,8 @@ void nln_proxy::create_security_batch(std::shared_ptr<WaffleQueue::queue<std::pa
         }
         else
         {
+            //TODO: actually implement putting keys to the backend.
+
             //// It's a PUT request
             // if(cache.checkIfKeyExists(currentKey) == false && EvictedItems.checkIfKeyExists(currentKey) == false) {
             //     auto isPresentInRunningKeys = runningKeys.insertIfNotPresent(currentKey);
@@ -136,7 +141,7 @@ void nln_proxy::responder_thread()
         std::vector<std::string> results;
         for (int i = 0; i < tuple.second.second.size(); i++)
         {
-            std::cout << "Responding to " << seq << "with " << tuple.second.second[i].get() <<std::endl;
+            //std::cout << "Responding to " << seq << "with " << tuple.second.second[i].get() <<std::endl;
             results.push_back(tuple.second.second[i].get());
         }
         id_to_client_->async_respond_client(seq, op_code, results);
