@@ -25,6 +25,9 @@ include(Dependencies)
 add_executable( 
     nln_server
     src/nln_server.cpp
+    src/nln_actor.cpp
+    src/nln_actor.h
+
     src/proxy_constants.cpp
     src/proxy_constants.h
     src/proxy_types.cpp
@@ -33,8 +36,16 @@ add_executable(
     src/waffle_thrift.h
     src/waffle_thrift_response.cpp
     src/waffle_thrift_response.h
+
+    src/waffle/util.h
+    src/waffle/util.cpp
+
+    src/waffle/thrift_response_client.cpp
+    src/waffle/thrift_response_client.h
+    src/waffle/thrift_response_client_map.cpp
+    src/waffle/thrift_response_client_map.h
 )
-add_dependencies(nln_server thrift_ep)
+add_dependencies(nln_server libcuckoo thrift_ep)
 target_link_libraries(
     nln_server
     ${THRIFTNB_LIBRARY}

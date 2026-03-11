@@ -31,11 +31,11 @@ import asyncio
 # Class to help with managing waffle instances.
 class Handle:
     def __init__(
-        self, used: bool = False, handle: subprocess.Popen = None, port: int = None
+        self, used: bool = False, command: str = None, port: int = None
     ):
         self.used = used
         if used:
-            self.handle = handle
+            self.command = command
         self.client: Client = None
         self.port = port
 
@@ -147,9 +147,7 @@ def initNLN(sets: int):
     levelMapPath = pathlib.Path("./NLNTraceFiles/level_map.txt").resolve()
     levelMap = Handle(
         used=True,
-        handle=subprocess.Popen(
-            [
-                str(wafflePath),
+        command=" ".join([str(wafflePath),
                 "-l",
                 str(levelMapPath),
                 "-r",
@@ -167,10 +165,7 @@ def initNLN(sets: int):
                 "-p",
                 str(redisPort),
                 "-0",
-                "9080",
-            ],
-            stdout = subprocess.PIPE
-        ),
+                "9080"]),
         port= 9080
     )
     for i in range(0, sets + 1):
@@ -192,8 +187,7 @@ def initNLN(sets: int):
                 handles.append(
                     Handle(
                         True,
-                        subprocess.Popen(
-                            [
+                        " ".join([
                                 str(wafflePath),
                                 "-l",
                                 str(levelPath),
@@ -213,24 +207,22 @@ def initNLN(sets: int):
                                 str(redisPort),
                                 "-0",
                                 str(waffleStartPort + i),
-                            ],
-                            stdout = subprocess.PIPE
-                        ),
+                            ]),
                         waffleStartPort + i,
                     )
                 )
 
-    # TODO: figure out why only the first spawned proxy server runs
+    # TODON'T: figure out why only the first spawned proxy server runs
     # and why it dies after a few seconds. Worst case, we have to
     # switch from a normal subprocess to something else.
-    print(levelMap.handle.pid)
-    for p in handles:
-        if p.used:
-            print(p.handle.pid)
+    # print(levelMap.handle.pid)
+    # for p in handles:
+    #     if p.used:
+    #         print(p.handle.pid)
 
     return levelMap
-__HOST = "localhost"
-__PORT = 7080
+#__HOST = "localhost"
+#__PORT = 7080
 
 
 #class ProxyHandler(object):
@@ -341,30 +333,69 @@ if __name__ == "__main__":
 
     levelMap = initNLN(sets)  # Initialize each Waffle instance
 
-    print(f"Waiting for Level map")
-    while True:
-        line = levelMap.handle.stdout.readline()
-        #print (line)
-        if line == b'Proxy server is reachable\n':
-            print("Level map ready")
-            #levelMap.client = makeClient(levelMap.port)
+    levelsHost = "10.10.153.115"
 
-            #print(levelMap.client.get("user7997323107739036606"))
-            break
+    with open("./nln_level_commands.txt","w+") as f:
+        f.write(f"{levelMap.command}\n")
+        for level in levelMap:
+            if level.used:
+                f.writable(f"{level.command}\n")
+            pass
         pass
 
-    for i, p in enumerate(handles):
-        print(f"Waiting for Level {i}")
-        if p.used == False:
-            print(f"Level {i} is unused")
-            continue
-        while True:
-            line = p.handle.stdout.readline()
-            #print (line)
-            if line == b'Proxy server is reachable\n':
-                print(f"Level {i} ready")
-                break
+    with open("./nln_proxy/src/nln_levels.h","w+") as f:
+        f.write("""
+#ifndef NLN_LEVELS_H
+#define NLN_LEVELS_H
+
+#include <string>
+
+
+struct levels_entry {
+    bool exists;
+    int port;
+};""")
+
+        f.write(f'const std::string           levels_host = "{levelsHost}";\n')
+        f.write(f"const struct levels_entry   levels[{sets + 1}] = {{\n")
+    
+        for level in levelMap:
+            f.write(f"{{ }},\n")
             pass
+        f.write("};\n")
+        f.write(f"const int                   levels_len  = {level};")
+
+
+
+
+#endif""")
+# )
+        pass
+
+    #print(f"Waiting for Level map")
+    #while True:
+    #    line = levelMap.handle.stdout.readline()
+    #    #print (line)
+    #    if line == b'Proxy server is reachable\n':
+    #        print("Level map ready")
+    #        #levelMap.client = makeClient(levelMap.port)
+
+    #        #print(levelMap.client.get("user7997323107739036606"))
+    #        break
+    #    pass
+
+    #for i, p in enumerate(handles):
+    #    print(f"Waiting for Level {i}")
+    #    if p.used == False:
+    #        print(f"Level {i} is unused")
+    #        continue
+    #    while True:
+    #        line = p.handle.stdout.readline()
+    #        #print (line)
+    #        if line == b'Proxy server is reachable\n':
+    #            print(f"Level {i} ready")
+    #            break
+    #        pass
 
     # TODO: Create a Thrift interface
 #    handler = ProxyHandler
