@@ -20,12 +20,13 @@ import asyncio
 #from proxy.waffle_thrift import Client
 #from proxy.waffle_thrift import sequence_id
 #
-#wafflePath = pathlib.Path("../waffle/bin/proxy_server").resolve()
+wafflePath = pathlib.Path("../waffle/bin/proxy_server").resolve()
 #waffleHost = "127.0.0.1"
-#waffleStartPort = 9090
+waffleStartPort = 9090
+nlnLevelMapPort = 8090
 #
-#redisHost = "127.0.0.1"
-#redisPort = 6379
+redisHost = "127.0.0.1"
+redisPort = 6379
 
 
 # Class to help with managing waffle instances.
@@ -337,9 +338,9 @@ if __name__ == "__main__":
 
     with open("./nln_level_commands.txt","w+") as f:
         f.write(f"{levelMap.command}\n")
-        for level in levelMap:
+        for level in handles:
             if level.used:
-                f.writable(f"{level.command}\n")
+                f.write(f"{level.command}\n")
             pass
         pass
 
@@ -354,16 +355,19 @@ if __name__ == "__main__":
 struct levels_entry {
     bool exists;
     int port;
-};""")
+};\n""")
 
         f.write(f'const std::string           levels_host = "{levelsHost}";\n')
+        f.write(f"const struct levels_entry   levels_map = {{.exists = true, .port = {nlnLevelMapPort}}};")
+
+        f.write(f"const int levels_len  = {sets + 1};\n")
         f.write(f"const struct levels_entry   levels[{sets + 1}] = {{\n")
     
-        for level in levelMap:
-            f.write(f"{{ }},\n")
+        for level in handles:
+            f.write(f"    {{.exists = {'true' if level.used else 'false' }, .port = {level.port if level.used else '-1'}  }},\n")
             pass
         f.write("};\n")
-        f.write(f"const int                   levels_len  = {level};")
+        f.write("#endif");
 
 
 
