@@ -435,7 +435,10 @@ void waffle_proxy::async_put_batch(const sequence_id &seq_id, const std::vector<
 };
 
 std::string waffle_proxy::get(int queue_id, const std::string &key) {
-    return get_future(queue_id, key).get();
+    std::cout << "got request for " << key << std::endl;
+    std::string res = get_future(queue_id, key).get();
+    std:: cout << "Got result " << res << std::endl;
+    return res;
 };
 
 void waffle_proxy::async_get(const sequence_id &seq_id, int queue_id, const std::string &key) {
