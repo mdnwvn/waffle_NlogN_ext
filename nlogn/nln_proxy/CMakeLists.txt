@@ -27,6 +27,9 @@ add_executable(
     src/nln_server.cpp
     src/nln_proxy.cpp
     src/nln_proxy.h
+    src/nln_levels.h
+    src/nln_client.h
+    src/nln_client.cpp
 
     src/proxy_constants.cpp
     src/proxy_constants.h

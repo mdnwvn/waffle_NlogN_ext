@@ -2,6 +2,8 @@
 #define NLN_ACTOR_H
 // Manages forwarding requests to the backend Waffle servers and sending responses back as well.
 
+#include "nln_client.h"
+
 #include <atomic>
 #include <unordered_map>
 #include <vector>
@@ -66,6 +68,9 @@ private:
     std::vector<std::thread> threads_;
     std::shared_ptr<thrift_response_client_map> id_to_client_;
     std::vector<std::shared_ptr<WaffleQueue::queue<std::pair<operation, std::shared_ptr<std::promise<std::string>>>>>> operation_queues_;
+
+    std::shared_ptr<nln_client> level_map_client_ ;
+    std::vector<std::shared_ptr<nln_client>> levels_clients_;
 
     int GET = 0;
     int PUT = 1;

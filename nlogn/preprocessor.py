@@ -23,7 +23,7 @@ import asyncio
 wafflePath = pathlib.Path("../waffle/bin/proxy_server").resolve()
 #waffleHost = "127.0.0.1"
 waffleStartPort = 9090
-nlnLevelMapPort = 8090
+nlnLevelMapPort = 9080
 #
 redisHost = "127.0.0.1"
 redisPort = 6379

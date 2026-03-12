@@ -1,16 +1,21 @@
 #include "nln_proxy.h"
 #include "waffle/operation.h"
+#include "nln_client.h"
 
 void nln_proxy::init(void **args)
 {
 
     id_to_client_ = *(static_cast<std::shared_ptr<thrift_response_client_map> *>(args[0]));
+    level_map_client_ = *(static_cast<std::shared_ptr<nln_client> *>(args[1]));
+    levels_clients_ = *(static_cast<std::vector<std::shared_ptr<nln_client>> *>(args[2]));
+
     // int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
     std::cout << "max cores is " << sysconf(_SC_NPROCESSORS_ONLN) << std::endl
               << " and current cores used is " << num_cores;
     std::vector<std::thread> threads;
 
-    for (int i = 0; i < num_cores; i++) {
+    for (int i = 0; i < num_cores; i++)
+    {
         auto q = std::make_shared<WaffleQueue::queue<std::pair<operation, std::shared_ptr<std::promise<std::string>>>>>();
         operation_queues_.push_back(q);
     }
@@ -60,12 +65,12 @@ void nln_proxy::create_security_batch(std::shared_ptr<WaffleQueue::queue<std::pa
         struct operation operat;
         auto operation_promise_pair = op_queue->pop();
         auto currentKey = operation_promise_pair.first.key;
-        //std::cout << operation_promise_pair.first.value << std::endl;
+        // std::cout << operation_promise_pair.first.value << std::endl;
         if (operation_promise_pair.first.value == "")
         {
-            //printf("hi\n");
+            // printf("hi\n");
 
-            //TODO: actually call a backend server to get the values.
+            // TODO: actually call a backend server to get the values.
             operation_promise_pair.second->set_value("test");
 
             // It's a GET request
@@ -87,7 +92,7 @@ void nln_proxy::create_security_batch(std::shared_ptr<WaffleQueue::queue<std::pa
         }
         else
         {
-            //TODO: actually implement putting keys to the backend.
+            // TODO: actually implement putting keys to the backend.
 
             //// It's a PUT request
             // if(cache.checkIfKeyExists(currentKey) == false && EvictedItems.checkIfKeyExists(currentKey) == false) {
@@ -141,7 +146,7 @@ void nln_proxy::responder_thread()
         std::vector<std::string> results;
         for (int i = 0; i < tuple.second.second.size(); i++)
         {
-            //std::cout << "Responding to " << seq << "with " << tuple.second.second[i].get() <<std::endl;
+            // std::cout << "Responding to " << seq << "with " << tuple.second.second[i].get() <<std::endl;
             results.push_back(tuple.second.second[i].get());
         }
         id_to_client_->async_respond_client(seq, op_code, results);

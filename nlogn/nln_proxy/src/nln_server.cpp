@@ -3,6 +3,8 @@
 
 #include "waffle_thrift.h"
 #include "nln_proxy.h"
+#include "nln_client.h"
+#include "nln_levels.h"
 
 #include "waffle/util.h"
 #include "waffle/thrift_response_client_map.h"
@@ -186,11 +188,30 @@ int main(int argc, char **argv)
   int num_threads = 4;
 
   std::shared_ptr<nln_proxy> proxy_ = std::make_shared<nln_proxy>();
-
   auto id_to_client = std::make_shared<thrift_response_client_map>();
+  void *arguments[3];
 
-  void *arguments[1];
+  std::cout << "Connecting to level map" << std::endl;
+  std::shared_ptr<nln_client> level_map_client = std::make_shared<nln_client>(levels_host, levels_map.port);
+
+  std::vector<std::shared_ptr<nln_client>> levels_clients;
+
+  for (int i = 0; i < levels_len; i++)
+  {
+    if (levels[i].exists)
+    {
+      levels_clients.push_back(std::make_shared<nln_client>(levels_host, levels[i].port));
+    }
+    else
+    {
+      levels_clients.push_back(std::shared_ptr<nln_client>(nullptr));
+    }
+  }
+
   arguments[0] = &id_to_client;
+  arguments[1] = &level_map_client;
+  arguments[2] = &levels_clients;
+
   dynamic_cast<nln_proxy &>(*proxy_).init(arguments);
 
   auto clone_factory = std::make_shared<WaffleCloneFactory>(id_to_client, proxy_);
