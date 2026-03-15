@@ -45,6 +45,9 @@ add_executable(
     src/waffle/queue.h
     src/waffle/operation.h
 
+    src/waffle/command_response_reader.cpp
+    src/waffle/command_response_reader.h
+
     src/waffle/thrift_response_client.cpp
     src/waffle/thrift_response_client.h
     src/waffle/thrift_response_client_map.cpp

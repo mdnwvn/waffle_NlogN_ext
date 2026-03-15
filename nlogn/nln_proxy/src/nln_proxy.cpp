@@ -38,7 +38,25 @@ void nln_proxy::async_get_batch(const sequence_id &seq_id, int queue_id, const s
     // std::cout << "async_get_batch client ID is " << seq_id.client_id << std::endl;
     respond_queue_.push(std::make_pair(GET_BATCH, std::make_pair(seq_id, std::move(waiters))));
     sequence_queue_.push(seq_id);
+
+    level_map_client_->get_batch(keys);
 };
+
+void nln_proxy::async_put_batch(const sequence_id &seq_id, int queue_id, const std::vector<std::string> &keys, const std::vector<std::string> &values) {
+    // Send waiters to responder thread
+    std::vector<std::future<std::string>> waiters;
+    // std::cout << "async_put_batch client ID is " << seq_id.client_id << std::endl;
+    int i = 0;
+    for (const auto &key: keys) {
+        waiters.push_back((put_future(queue_id, key, values[i])));
+        i++;
+    }
+
+    respond_queue_.push(std::make_pair(PUT_BATCH, std::make_pair(seq_id, std::move(waiters))));
+    sequence_queue_.push(seq_id);
+};
+
+
 
 std::future<std::string> nln_proxy::get_future(int queue_id, const std::string &key)
 {
@@ -47,6 +65,17 @@ std::future<std::string> nln_proxy::get_future(int queue_id, const std::string &
     struct operation operat;
     operat.key = key;
     operat.value = "";
+    operation_queues_[queue_id % operation_queues_.size()]->push(std::make_pair(operat, prom));
+    return waiter;
+};
+
+
+std::future<std::string> nln_proxy::put_future(int queue_id, const std::string &key, const std::string &value) {
+    auto prom = std::make_shared<std::promise<std::string>>();
+    std::future<std::string> waiter = prom->get_future();
+    struct operation operat;
+    operat.key = key;
+    operat.value = value;
     operation_queues_[queue_id % operation_queues_.size()]->push(std::make_pair(operat, prom));
     return waiter;
 };
@@ -104,6 +133,7 @@ void nln_proxy::create_security_batch(std::shared_ptr<WaffleQueue::queue<std::pa
             // }
             // cache.insertIntoCache(currentKey, operation_promise_pair.first.value);
             // operation_promise_pair.second->set_value(cache.getValueWithoutPositionChange(currentKey));
+            operation_promise_pair.second->set_value("test");
         }
     }
 };

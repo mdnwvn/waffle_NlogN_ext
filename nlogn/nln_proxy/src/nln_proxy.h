@@ -72,12 +72,8 @@ private:
     std::shared_ptr<nln_client> level_map_client_ ;
     std::vector<std::shared_ptr<nln_client>> levels_clients_;
 
-    int GET = 0;
-    int PUT = 1;
-    int GET_BATCH = 2;
 
     bool finished_ = false;
-    int PUT_BATCH = 3;
     
 
     WaffleQueue::queue<std::pair<int, std::pair<const sequence_id &, std::vector<std::future<std::string>>>>> respond_queue_;

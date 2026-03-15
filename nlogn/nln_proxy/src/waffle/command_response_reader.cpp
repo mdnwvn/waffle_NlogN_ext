@@ -6,14 +6,12 @@ command_response_reader::command_response_reader(std::shared_ptr<apache::thrift:
 }
 
 int64_t command_response_reader::recv_response(std::vector<std::string> &out) {
-  
   using namespace ::apache::thrift::protocol;
   using namespace ::apache::thrift;
+
   int32_t rseqid = 0;
   std::string fname;
   TMessageType mtype;
-
-  std::cout << "recv'd res " << std::endl;
 
   this->iprot_->readMessageBegin(fname, mtype, rseqid);
   if (mtype == T_EXCEPTION) {

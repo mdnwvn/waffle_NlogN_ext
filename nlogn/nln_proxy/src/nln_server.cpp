@@ -98,17 +98,19 @@ public:
   {
     // Your implementation goes here
     proxy_->async_get_batch(seq_id, operation_count_++, keys);
-    printf("async_get_batch\n");
+    
+   //printf("async_get_batch\n");
   }
 
   void async_put_batch(const sequence_id &seq_id, const std::vector<std::string> &keys, const std::vector<std::string> &values)
   {
     // Your implementation goes here
-    std::cout << keys.size() << std::endl;
-    std::cout << keys[0] << std::endl;
+    //std::cout << keys.size() << std::endl;
+    //std::cout << keys[0] << std::endl;
 
     // async_put_batch(seq_id, rand_uint32(0, RAND_MAX), keys, values);
-    printf("async_put_batch\n");
+    //printf("async_put_batch\n");
+    proxy_->async_put_batch(seq_id, operation_count_++, keys, values);
   }
 
   void get(std::string &_return, const std::string &key)
