@@ -213,9 +213,10 @@ def initNLN(sets: int):
                     )
                 )
 
-    # TODON'T: figure out why only the first spawned proxy server runs
-    # and why it dies after a few seconds. Worst case, we have to
-    # switch from a normal subprocess to something else.
+    # TODO: figure out why only the first spawned proxy server runs
+    # and why it dies after a few seconds.\
+
+
     # print(levelMap.handle.pid)
     # for p in handles:
     #     if p.used:
@@ -326,7 +327,7 @@ if __name__ == "__main__":
     # Input tracefile path
     # dbPath = pathlib.Path("./DBTraceFiles/serverInput.txt").resolve()
     dbPath = pathlib.Path(
-        "../waffle/tracefiles/0.99/workloada/proxy_server_command_line_input.txt"
+        "../waffle/tracefiles/0.99/workloadc/proxy_server_command_line_input.txt"
     ).resolve()
 
     dbSize: int = getSize(dbPath)  # Get the size of the database in bytes
@@ -367,7 +368,7 @@ struct levels_entry {
             f.write(f"    {{.exists = {'true' if level.used else 'false' }, .port = {level.port if level.used else '-1'}  }},\n")
             pass
         f.write("};\n")
-        f.write("#endif");
+        f.write("#endif")
 
 
 
@@ -401,7 +402,7 @@ struct levels_entry {
     #            break
     #        pass
 
-    # TODO: Create a Thrift interface
+    # DONE: Create a Thrift interface
 #    handler = ProxyHandler
 #    processor = waffle_thrift.Processor(handler)
 #    transport = TSocket.TServerSocket(__HOST, __PORT)

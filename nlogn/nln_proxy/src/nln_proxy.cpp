@@ -14,6 +14,13 @@ void nln_proxy::init(void **args)
               << " and current cores used is " << num_cores;
     std::vector<std::thread> threads;
 
+
+    std::vector<std::string> keysCacheUnencrypted;
+    std::vector<std::string> valuesCache;
+
+    cache = Cache(keysCacheUnencrypted, valuesCache, (100*100000)*10);
+    
+
     for (int i = 0; i < num_cores; i++)
     {
         auto q = std::make_shared<WaffleQueue::queue<std::pair<operation, std::shared_ptr<std::promise<std::string>>>>>();
@@ -25,6 +32,8 @@ void nln_proxy::init(void **args)
     }
 
     threads_.push_back(std::thread(&nln_proxy::responder_thread, this));
+
+
 }
 
 void nln_proxy::async_get_batch(const sequence_id &seq_id, int queue_id, const std::vector<std::string> &keys)
@@ -42,12 +51,14 @@ void nln_proxy::async_get_batch(const sequence_id &seq_id, int queue_id, const s
     level_map_client_->get_batch(keys);
 };
 
-void nln_proxy::async_put_batch(const sequence_id &seq_id, int queue_id, const std::vector<std::string> &keys, const std::vector<std::string> &values) {
+void nln_proxy::async_put_batch(const sequence_id &seq_id, int queue_id, const std::vector<std::string> &keys, const std::vector<std::string> &values)
+{
     // Send waiters to responder thread
     std::vector<std::future<std::string>> waiters;
     // std::cout << "async_put_batch client ID is " << seq_id.client_id << std::endl;
     int i = 0;
-    for (const auto &key: keys) {
+    for (const auto &key : keys)
+    {
         waiters.push_back((put_future(queue_id, key, values[i])));
         i++;
     }
@@ -55,8 +66,6 @@ void nln_proxy::async_put_batch(const sequence_id &seq_id, int queue_id, const s
     respond_queue_.push(std::make_pair(PUT_BATCH, std::make_pair(seq_id, std::move(waiters))));
     sequence_queue_.push(seq_id);
 };
-
-
 
 std::future<std::string> nln_proxy::get_future(int queue_id, const std::string &key)
 {
@@ -69,8 +78,8 @@ std::future<std::string> nln_proxy::get_future(int queue_id, const std::string &
     return waiter;
 };
 
-
-std::future<std::string> nln_proxy::put_future(int queue_id, const std::string &key, const std::string &value) {
+std::future<std::string> nln_proxy::put_future(int queue_id, const std::string &key, const std::string &value)
+{
     auto prom = std::make_shared<std::promise<std::string>>();
     std::future<std::string> waiter = prom->get_future();
     struct operation operat;
@@ -80,9 +89,9 @@ std::future<std::string> nln_proxy::put_future(int queue_id, const std::string &
     return waiter;
 };
 
-void nln_proxy::create_security_batch(std::shared_ptr<WaffleQueue::queue<std::pair<operation, std::shared_ptr<std::promise<std::string>>>>> &op_queue,
-                                      std::vector<operation> &storage_batch,
-                                      std::unordered_map<std::string, std::vector<std::shared_ptr<std::promise<std::string>>>> &keyToPromiseMap, int &cacheMisses)
+void nln_proxy::resolve_promise(std::shared_ptr<WaffleQueue::queue<std::pair<operation, std::shared_ptr<std::promise<std::string>>>>> &op_queue,
+                                std::vector<operation> &storage_batch,
+                                std::unordered_map<std::string, std::vector<std::shared_ptr<std::promise<std::string>>>> &keyToPromiseMap, int &cacheMisses)
 {
 
     if (op_queue->size() == 0)
@@ -94,46 +103,34 @@ void nln_proxy::create_security_batch(std::shared_ptr<WaffleQueue::queue<std::pa
         struct operation operat;
         auto operation_promise_pair = op_queue->pop();
         auto currentKey = operation_promise_pair.first.key;
-        // std::cout << operation_promise_pair.first.value << std::endl;
+
+        // TODO: waffle more or less handles this part synchronously. Needs to be integrated
+        // with asynchronous backend calls. Stall until we get data? works but seems wasteful. 
+
         if (operation_promise_pair.first.value == "")
         {
-            // printf("hi\n");
+
+
+                operation_promise_pair.second->set_value("test");
 
             // TODO: actually call a backend server to get the values.
-            operation_promise_pair.second->set_value("test");
-
-            // It's a GET request
-            // bool isPresentInCache = false;
-            // auto val = cache.getValueWithoutPositionChangeNew(currentKey, isPresentInCache);
-            // auto valEvicted = EvictedItems.getValue(currentKey);
-            // if(isPresentInCache == true) {
+            //bool isPresentInCache = false;
+            //auto val = cache.getValueWithoutPositionChangeNew(currentKey, isPresentInCache);
+            //if(isPresentInCache == true) {
             //    operation_promise_pair.second->set_value(val);
-            //}
-            // else if(valEvicted != "") {
-            //    operation_promise_pair.second->set_value(valEvicted);
             //} else {
-            //    auto isPresentInRunningKeys = runningKeys.insertIfNotPresent(currentKey, operation_promise_pair.second);
-            //    if(isPresentInRunningKeys == false) {
-            //        storage_batch.push_back(operation_promise_pair.first);
-            //    }
-            //    ++cacheMisses;
+            //    
+            //    // Push the operation back onto the queue and record a cache miss.
+            //    op_queue->push(operation_promise_pair);
+            //    cacheMisses += 1;
             //}
+
         }
         else
         {
             // TODO: actually implement putting keys to the backend.
-
-            //// It's a PUT request
-            // if(cache.checkIfKeyExists(currentKey) == false && EvictedItems.checkIfKeyExists(currentKey) == false) {
-            //     auto isPresentInRunningKeys = runningKeys.insertIfNotPresent(currentKey);
-            //     if(isPresentInRunningKeys == false) {
-            //         storage_batch.push_back(operation_promise_pair.first);
-            //     }
-            //     ++cacheMisses;
-            // }
-            // cache.insertIntoCache(currentKey, operation_promise_pair.first.value);
-            // operation_promise_pair.second->set_value(cache.getValueWithoutPositionChange(currentKey));
-            operation_promise_pair.second->set_value("test");
+            cache.insertIntoCache(currentKey, operation_promise_pair.first.value);
+            operation_promise_pair.second->set_value(operation_promise_pair.first.value);
         }
     }
 };
@@ -158,7 +155,7 @@ void nln_proxy::consumer_thread(int id)
             if (operation_queues_[id]->size() > 0)
             {
 
-                create_security_batch(operation_queues_[id], storage_batch, keyToPromiseMap, cacheMisses);
+                resolve_promise(operation_queues_[id], storage_batch, keyToPromiseMap, cacheMisses);
                 ++i;
             }
         }

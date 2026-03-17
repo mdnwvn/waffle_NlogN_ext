@@ -3,6 +3,7 @@
 #include "nln_client.h"
 
 #include "waffle/queue.h"
+#include "nln_levels.h"
 
 #include <thrift/protocol/TBinaryProtocol.h>
 #include <thrift/transport/TSocket.h>
@@ -40,17 +41,17 @@ nln_client::nln_client(std::string host, int port) : host(host), port(port)
   response_thread_ = new std::thread(&nln_client::read_responses, this);
 
   // std::cout << "in constructor" << std::endl;
-  //std::shared_ptr<TTransport> socket(new TSocket(host, port));
+  // std::shared_ptr<TTransport> socket(new TSocket(host, port));
 
   // std::cout << "Socket created " << std::endl;
-  //std::shared_ptr<TTransport> transport(new TFramedTransport(socket));
-  //std::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+  // std::shared_ptr<TTransport> transport(new TFramedTransport(socket));
+  // std::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
 
   // std::cout << "Storing pointer" << std::endl;
 
   // std::shared_ptr<waffle_thriftConcurrentClient> client_test_ = ;
 
-  //transport->open();
+  // transport->open();
 
   // std::string res;
   // std::string key = "user451800245123463256";
@@ -58,6 +59,12 @@ nln_client::nln_client(std::string host, int port) : host(host), port(port)
   // client_->get(res, key);
 
   std::cout << "Client created " << std::endl;
+}
+
+lookup_client::lookup_client(std::string host, int port, void **args) : nln_client(host, port)
+{
+
+  levels_clients_ = *(static_cast<std::vector<std::shared_ptr<nln_client>> *>(args[0]));
 }
 
 // std::string nln_client::get_level(const std::string &key)
@@ -82,14 +89,49 @@ int64_t nln_client::get_client_id()
 //   seq_id_.__set_client_seq_no(sequence_num++);
 //   client_->get_batch(_res, keys);
 // }
-// 
+//
 // void level_client::get_batch(const std::vector<std::string> &keys)
 // {
-// 
+//
 //   std::vector<std::string> _res;
 //   seq_id_.__set_client_seq_no(sequence_num++);
 //   client_->get_batch(_res, keys);
 // }
+
+void lookup_client::get_batch(const std::vector<std::string> &keys)
+{
+  std::unique_lock<std::mutex> mlock(*m_mtx_);
+  // std::cout << "Entering async_proxy_client.cpp line " << __LINE__ << "requests size is " << requests_->size() << std::endl;
+  while (requests_->size() >= in_flight_limit_)
+  {
+    // std::cout << "Waiting for lock " <<std::endl;
+    m_cond_->wait(mlock);
+  }
+
+  std::cout << "client get_batch" << std::endl;
+  std::vector<std::string> _return;
+  seq_id_.__set_client_seq_no(sequence_num++);
+  client_->async_get_batch(seq_id_, keys);
+  requests_->push(GET_BATCH);
+
+  pending_get_requests.insert(std::make_pair(seq_id_.client_seq_no, keys));
+}
+
+void lookup_client::put_batch(const std::vector<std::string> &keys, const std::vector<std::string> &values)
+{
+  std::unique_lock<std::mutex> mlock(*m_mtx_);
+  while (requests_->size() >= in_flight_limit_)
+  {
+    // std::cout << "Waiting for lock " <<std::endl;
+    m_cond_->wait(mlock);
+  }
+  std::string _return;
+  seq_id_.__set_client_seq_no(sequence_num++);
+  client_->async_put_batch(seq_id_, keys, values);
+  requests_->push(PUT_BATCH);
+
+  pending_put_requests.insert(std::make_pair(seq_id_.client_seq_no, std::make_pair(keys, values)));
+}
 
 void nln_client::get_batch(const std::vector<std::string> &keys)
 {
@@ -97,8 +139,9 @@ void nln_client::get_batch(const std::vector<std::string> &keys)
   std::vector<std::string> _return;
   seq_id_.__set_client_seq_no(sequence_num++);
   client_->async_get_batch(seq_id_, keys);
-
   requests_->push(GET_BATCH);
+
+  pending_get_requests.insert(std::make_pair(seq_id_.client_seq_no, keys));
 }
 
 void nln_client::put_batch(const std::vector<std::string> &keys, const std::vector<std::string> &values)
@@ -106,9 +149,82 @@ void nln_client::put_batch(const std::vector<std::string> &keys, const std::vect
   std::string _return;
   seq_id_.__set_client_seq_no(sequence_num++);
   client_->async_put_batch(seq_id_, keys, values);
-
-
   requests_->push(PUT_BATCH);
+
+  pending_put_requests.insert(std::make_pair(seq_id_.client_seq_no, std::make_pair(keys, values)));
+}
+
+void lookup_client::read_responses()
+{
+  std::cout << "Client read responses is called " << std::endl;
+  std::vector<std::string> _return;
+  while (!done_->load())
+  {
+    auto type = requests_->pop();
+    m_cond_->notify_one();
+    try
+    {
+
+      // std::cout << "recv'd response?" << std::endl;
+
+      int64_t id = reader_.recv_response(_return);
+      auto found = pending_get_requests.find(id);
+      if (found != pending_get_requests.end())
+      {
+        std::cout << _return[0] << " | " << id << " | " << type << " | " << found->second[0] << " | " << _return.size() << " " << found->second.size() << std::endl;
+
+        std::unordered_map<int, std::pair<std::vector<std::string>, std::vector<std::string>>> responses;
+        for (int i = 0; i < _return.size(); i++)
+        {
+
+          char *end;
+          int index = strtol(_return[i].c_str(), &end, 10);
+
+          if (end != nullptr)
+          {
+            auto slot = responses.find(index);
+            // std::cout << strtol(_return[i].c_str(), &end, 10) << std::endl;
+            if (slot != responses.end())
+            {
+
+              slot->second.first.push_back(found->second[i]);
+            }
+            else
+            {
+              responses.insert(std::make_pair(index, std::make_pair(std::vector<std::string>(), std::vector<std::string>())));
+              slot = responses.find(index);
+              slot->second.first.push_back(found->second[i]);
+            }
+          }
+          else
+          {
+          }
+        }
+
+        std::cout << responses.size() << std::endl;
+
+
+        // this doesnt quite work yet
+        for (int i = 0; i < responses.size(); i++)
+        {
+          if (levels[i].exists)
+          {
+            levels_clients_[i]->get_batch(responses[i].second.first);
+          }
+        }
+      }
+      else
+
+        std::cout << _return[0] << " | " << id << " | " << type << " | Not pending?" << std::endl;
+    }
+    catch (apache::thrift::transport::TTransportException e)
+    {
+      // std::cout << "Client read responses is FAILURE " << std::endl;
+      (void)0;
+    }
+    *total_ += _return.size();
+    _return.clear();
+  }
 }
 
 void nln_client::read_responses()
@@ -122,10 +238,17 @@ void nln_client::read_responses()
     try
     {
 
-      std::cout << "recv'd response?" << std::endl;
+      // std::cout << "recv'd response?" << std::endl;
 
       int64_t id = reader_.recv_response(_return);
-      std::cout << _return[0] << " | " << id  << std::endl;
+      auto found = pending_get_requests.find(id);
+      if (found != pending_get_requests.end())
+
+        std::cout << _return[0] << " | " << id << " | " << type << " | " << found->second[0] << " | " << _return.size() << " " << found->second.size() << std::endl;
+
+      else
+
+        std::cout << _return[0] << " | " << id << " | " << type << " | Not pending?" << std::endl;
     }
     catch (apache::thrift::transport::TTransportException e)
     {

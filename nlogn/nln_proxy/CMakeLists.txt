@@ -35,6 +35,8 @@ add_executable(
     src/proxy_constants.h
     src/proxy_types.cpp
     src/proxy_types.h
+
+
     src/waffle_thrift.cpp
     src/waffle_thrift.h
     src/waffle_thrift_response.cpp
@@ -44,6 +46,8 @@ add_executable(
     src/waffle/util.cpp
     src/waffle/queue.h
     src/waffle/operation.h
+    src/waffle/Cache.cpp
+    src/waffle/Cache.hpp
 
     src/waffle/command_response_reader.cpp
     src/waffle/command_response_reader.h

@@ -3,6 +3,7 @@
 // Manages forwarding requests to the backend Waffle servers and sending responses back as well.
 
 #include "nln_client.h"
+#include "waffle/Cache.hpp"
 
 #include <atomic>
 #include <unordered_map>
@@ -53,13 +54,15 @@ public:
     void async_get_batch(const sequence_id &seq_id, int queue_id, const std::vector<std::string> &keys);
     void async_put_batch(const sequence_id &seq_id, int queue_id, const std::vector<std::string> &keys, const std::vector<std::string> &values);
 
+    void get_from_levels(int64_t sequence_no, const std::vector<std::string> &keys, const std::vector<std::string> &levels);
+
     std::future<std::string> get_future(int queue_id, const std::string &key);
     std::future<std::string> put_future(int queue_id, const std::string &key, const std::string &value);
 
     int num_cores = 1;
 
 private:
-    void create_security_batch(std::shared_ptr<WaffleQueue::queue<std::pair<operation, std::shared_ptr<std::promise<std::string>>>>> &op_queue,
+    void resolve_promise(std::shared_ptr<WaffleQueue::queue<std::pair<operation, std::shared_ptr<std::promise<std::string>>>>> &op_queue,
                                std::vector<operation> &storage_batch,
                                std::unordered_map<std::string, std::vector<std::shared_ptr<std::promise<std::string>>>> &keyToPromiseMap, int &cacheMisses);
 
@@ -74,7 +77,10 @@ private:
 
 
     bool finished_ = false;
+
     
+    Cache cache;
+    int cacheMisses = 0;
 
     WaffleQueue::queue<std::pair<int, std::pair<const sequence_id &, std::vector<std::future<std::string>>>>> respond_queue_;
     WaffleQueue::queue<sequence_id> sequence_queue_;

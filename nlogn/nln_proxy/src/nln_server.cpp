@@ -98,18 +98,18 @@ public:
   {
     // Your implementation goes here
     proxy_->async_get_batch(seq_id, operation_count_++, keys);
-    
-   //printf("async_get_batch\n");
+
+    // printf("async_get_batch\n");
   }
 
   void async_put_batch(const sequence_id &seq_id, const std::vector<std::string> &keys, const std::vector<std::string> &values)
   {
     // Your implementation goes here
-    //std::cout << keys.size() << std::endl;
-    //std::cout << keys[0] << std::endl;
+    // std::cout << keys.size() << std::endl;
+    // std::cout << keys[0] << std::endl;
 
     // async_put_batch(seq_id, rand_uint32(0, RAND_MAX), keys, values);
-    //printf("async_put_batch\n");
+    // printf("async_put_batch\n");
     proxy_->async_put_batch(seq_id, operation_count_++, keys, values);
   }
 
@@ -192,10 +192,9 @@ int main(int argc, char **argv)
   std::shared_ptr<nln_proxy> proxy_ = std::make_shared<nln_proxy>();
   auto id_to_client = std::make_shared<thrift_response_client_map>();
   void *arguments[3];
+  void *lookup_args[1];
 
   std::cout << "Connecting to level map" << std::endl;
-  std::shared_ptr<nln_client> level_map_client = std::make_shared<nln_client>(levels_host, levels_map.port);
-
   std::vector<std::shared_ptr<nln_client>> levels_clients;
 
   for (int i = 0; i < levels_len; i++)
@@ -209,6 +208,8 @@ int main(int argc, char **argv)
       levels_clients.push_back(std::shared_ptr<nln_client>(nullptr));
     }
   }
+  lookup_args[0] = &levels_clients;
+  std::shared_ptr<lookup_client> level_map_client = std::make_shared<lookup_client>(levels_host, levels_map.port, lookup_args);
 
   arguments[0] = &id_to_client;
   arguments[1] = &level_map_client;
