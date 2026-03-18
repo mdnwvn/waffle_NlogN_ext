@@ -14,6 +14,8 @@
 #include <thread>
 #include <unordered_map>
 
+class nln_proxy;
+
 class nln_client
 {
 public:
@@ -23,7 +25,7 @@ public:
     // std::string get_level(const std::string &key);
 
     void put_batch(const std::vector<std::string> &keys, const std::vector<std::string> &values);
-    void get_batch(const std::vector<std::string> &keys);
+    //void get_batch(const std::vector<std::string> &keys);
 
 protected:
     int batch_size = 2000;
@@ -57,6 +59,18 @@ protected:
 
     void read_responses();
 };
+class level_client : public nln_client
+{
+    public:
+
+    level_client(std::string host, int port, void **args);
+    void get_batch(const std::vector<std::string> &keys);
+
+private:
+    std::shared_ptr<nln_proxy> proxy_;
+    void read_responses();
+    
+};
 
 class lookup_client : public nln_client
 {
@@ -66,15 +80,11 @@ public:
     void put_batch(const std::vector<std::string> &keys, const std::vector<std::string> &values);
 
 private:
-    std::vector<std::shared_ptr<nln_client>> levels_clients_;
+    std::vector<std::shared_ptr<level_client>> levels_clients_;
 
     void read_responses();
 };
 
-class level_client : public nln_client
-{
 
-    void get_batch(const std::vector<std::string> &keys);
-};
 
 #endif

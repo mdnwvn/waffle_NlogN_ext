@@ -59,6 +59,8 @@ public:
     std::future<std::string> get_future(int queue_id, const std::string &key);
     std::future<std::string> put_future(int queue_id, const std::string &key, const std::string &value);
 
+    void insert_into_cache(const std::vector<std::string> &keys, const std::vector<std::string> &values);
+
     int num_cores = 1;
 
 private:
@@ -72,8 +74,8 @@ private:
     std::shared_ptr<thrift_response_client_map> id_to_client_;
     std::vector<std::shared_ptr<WaffleQueue::queue<std::pair<operation, std::shared_ptr<std::promise<std::string>>>>>> operation_queues_;
 
-    std::shared_ptr<nln_client> level_map_client_ ;
-    std::vector<std::shared_ptr<nln_client>> levels_clients_;
+    std::shared_ptr<lookup_client> level_map_client_ ;
+    std::vector<std::shared_ptr<level_client>> levels_clients_;
 
 
     bool finished_ = false;

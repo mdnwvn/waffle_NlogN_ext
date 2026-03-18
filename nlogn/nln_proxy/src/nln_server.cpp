@@ -193,19 +193,22 @@ int main(int argc, char **argv)
   auto id_to_client = std::make_shared<thrift_response_client_map>();
   void *arguments[3];
   void *lookup_args[1];
+  void *levels_args[1];
 
   std::cout << "Connecting to level map" << std::endl;
-  std::vector<std::shared_ptr<nln_client>> levels_clients;
+  std::vector<std::shared_ptr<level_client>> levels_clients;
+
+  levels_args[0] = &proxy_;
 
   for (int i = 0; i < levels_len; i++)
   {
     if (levels[i].exists)
     {
-      levels_clients.push_back(std::make_shared<nln_client>(levels_host, levels[i].port));
+      levels_clients.push_back(std::make_shared<level_client>(levels_host, levels[i].port, levels_args));
     }
     else
     {
-      levels_clients.push_back(std::shared_ptr<nln_client>(nullptr));
+      levels_clients.push_back(std::shared_ptr<level_client>(nullptr));
     }
   }
   lookup_args[0] = &levels_clients;

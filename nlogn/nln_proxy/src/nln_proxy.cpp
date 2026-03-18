@@ -6,8 +6,8 @@ void nln_proxy::init(void **args)
 {
 
     id_to_client_ = *(static_cast<std::shared_ptr<thrift_response_client_map> *>(args[0]));
-    level_map_client_ = *(static_cast<std::shared_ptr<nln_client> *>(args[1]));
-    levels_clients_ = *(static_cast<std::vector<std::shared_ptr<nln_client>> *>(args[2]));
+    level_map_client_ = *(static_cast<std::shared_ptr<lookup_client> *>(args[1]));
+    levels_clients_ = *(static_cast<std::vector<std::shared_ptr<level_client>> *>(args[2]));
 
     // int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
     std::cout << "max cores is " << sysconf(_SC_NPROCESSORS_ONLN) << std::endl
@@ -89,6 +89,15 @@ std::future<std::string> nln_proxy::put_future(int queue_id, const std::string &
     return waiter;
 };
 
+void nln_proxy::insert_into_cache(const std::vector<std::string> &keys, const std::vector<std::string> &values) {
+
+    for (int i = 0; i < keys.size(); i++)
+    {
+            cache.insertIntoCache(keys[i], values[i]);
+    }
+    
+}
+
 void nln_proxy::resolve_promise(std::shared_ptr<WaffleQueue::queue<std::pair<operation, std::shared_ptr<std::promise<std::string>>>>> &op_queue,
                                 std::vector<operation> &storage_batch,
                                 std::unordered_map<std::string, std::vector<std::shared_ptr<std::promise<std::string>>>> &keyToPromiseMap, int &cacheMisses)
@@ -114,16 +123,18 @@ void nln_proxy::resolve_promise(std::shared_ptr<WaffleQueue::queue<std::pair<ope
                 operation_promise_pair.second->set_value("test");
 
             // TODO: actually call a backend server to get the values.
-            //bool isPresentInCache = false;
-            //auto val = cache.getValueWithoutPositionChangeNew(currentKey, isPresentInCache);
-            //if(isPresentInCache == true) {
-            //    operation_promise_pair.second->set_value(val);
-            //} else {
-            //    
-            //    // Push the operation back onto the queue and record a cache miss.
-            //    op_queue->push(operation_promise_pair);
-            //    cacheMisses += 1;
-            //}
+            /*
+            bool isPresentInCache = false;
+            auto val = cache.getValueWithoutPositionChangeNew(currentKey, isPresentInCache);
+            if(isPresentInCache == true) {
+                operation_promise_pair.second->set_value(val);
+            } else {
+                
+                // Push the operation back onto the queue and record a cache miss.
+                op_queue->push(operation_promise_pair);
+                
+                cacheMisses += 1;
+            } */
 
         }
         else
