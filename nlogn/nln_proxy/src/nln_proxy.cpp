@@ -6,7 +6,7 @@ void nln_proxy::init(void **args)
 {
 
     id_to_client_ = *(static_cast<std::shared_ptr<thrift_response_client_map> *>(args[0]));
-    level_map_client_ = *(static_cast<std::shared_ptr<lookup_client> *>(args[1]));
+    //level_map_client_ = *(static_cast<std::shared_ptr<lookup_client> *>(args[1]));
     levels_clients_ = *(static_cast<std::vector<std::shared_ptr<level_client>> *>(args[2]));
 
     // int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
@@ -48,7 +48,7 @@ void nln_proxy::async_get_batch(const sequence_id &seq_id, int queue_id, const s
     respond_queue_.push(std::make_pair(GET_BATCH, std::make_pair(seq_id, std::move(waiters))));
     sequence_queue_.push(seq_id);
 
-    level_map_client_->get_batch(keys);
+    //level_map_client_->get_batch(keys);
 };
 
 void nln_proxy::async_put_batch(const sequence_id &seq_id, int queue_id, const std::vector<std::string> &keys, const std::vector<std::string> &values)

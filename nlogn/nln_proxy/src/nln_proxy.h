@@ -74,8 +74,10 @@ private:
     std::shared_ptr<thrift_response_client_map> id_to_client_;
     std::vector<std::shared_ptr<WaffleQueue::queue<std::pair<operation, std::shared_ptr<std::promise<std::string>>>>>> operation_queues_;
 
-    std::shared_ptr<lookup_client> level_map_client_ ;
+    //std::shared_ptr<lookup_client> level_map_client_ ;
     std::vector<std::shared_ptr<level_client>> levels_clients_;
+
+    std::shared_ptr<std::unordered_map<std::string, int>> lookup_table;
 
 
     bool finished_ = false;

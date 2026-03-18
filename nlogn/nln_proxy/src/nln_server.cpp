@@ -184,6 +184,12 @@ private:
   std::shared_ptr<nln_proxy> proxy_;
 };
 
+
+std::shared_ptr<std::unordered_map<std::string, int>> parse_lookup() {
+  
+}
+
+
 int main(int argc, char **argv)
 {
   int port = 9090;
@@ -192,7 +198,7 @@ int main(int argc, char **argv)
   std::shared_ptr<nln_proxy> proxy_ = std::make_shared<nln_proxy>();
   auto id_to_client = std::make_shared<thrift_response_client_map>();
   void *arguments[3];
-  void *lookup_args[1];
+  //void *lookup_args[1];
   void *levels_args[1];
 
   std::cout << "Connecting to level map" << std::endl;
@@ -211,11 +217,11 @@ int main(int argc, char **argv)
       levels_clients.push_back(std::shared_ptr<level_client>(nullptr));
     }
   }
-  lookup_args[0] = &levels_clients;
-  std::shared_ptr<lookup_client> level_map_client = std::make_shared<lookup_client>(levels_host, levels_map.port, lookup_args);
+  //lookup_args[0] = &levels_clients;
+  //std::shared_ptr<lookup_client> level_map_client = std::make_shared<lookup_client>(levels_host, levels_map.port, lookup_args);
 
   arguments[0] = &id_to_client;
-  arguments[1] = &level_map_client;
+  //arguments[1] = &level_map_client;
   arguments[2] = &levels_clients;
 
   dynamic_cast<nln_proxy &>(*proxy_).init(arguments);
