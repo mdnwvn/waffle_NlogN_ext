@@ -1,3 +1,11 @@
+# NlogN
+
+
+
+
+
+
+*Original Waffle ReadMe*:
 # Waffle
 
 **NOTE**: Although Waffle is intended & recommended to run on 3 different machines, we can still run all the three processes on the same machine.
