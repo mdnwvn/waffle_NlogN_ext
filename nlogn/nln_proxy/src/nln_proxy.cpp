@@ -1,25 +1,56 @@
 #include "nln_proxy.h"
 #include "waffle/operation.h"
 #include "nln_client.h"
+#include "nln_levels.h"
+
+#include <fstream>
+#include <regex>
+#include <assert.h>
 
 void nln_proxy::init(void **args)
 {
 
     id_to_client_ = *(static_cast<std::shared_ptr<thrift_response_client_map> *>(args[0]));
-    //level_map_client_ = *(static_cast<std::shared_ptr<lookup_client> *>(args[1]));
+    // level_map_client_ = *(static_cast<std::shared_ptr<lookup_client> *>(args[1]));
     levels_clients_ = *(static_cast<std::vector<std::shared_ptr<level_client>> *>(args[2]));
+
+    lookup_table = std::make_shared<std::unordered_map<std::string, int>>();
+    std::ifstream lookup_file(lookup_table_path);
+    assert(lookup_file.is_open());
+
+    std::regex rgx("^(SET)\\s(\\S*)\\s((\\d+).*)$");
+    std::smatch line_matches;
+
+    std::string line;
+    while (std::getline(lookup_file, line))
+    {
+        if (std::regex_match(line, line_matches, rgx))
+        {
+            assert(line_matches.size() == 5);
+            assert(line_matches[1] == "SET");
+
+            char *end;
+            int index = strtol(line_matches[4].str().c_str(), &end, 10);
+            assert(end != nullptr);
+
+            lookup_table->insert(std::make_pair(line_matches[2], index));
+        }
+        else
+        {
+            throw std::runtime_error("Bad regex match");
+        }
+    }
+    lookup_file.close();
 
     // int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
     std::cout << "max cores is " << sysconf(_SC_NPROCESSORS_ONLN) << std::endl
               << " and current cores used is " << num_cores;
     std::vector<std::thread> threads;
 
-
     std::vector<std::string> keysCacheUnencrypted;
     std::vector<std::string> valuesCache;
 
-    cache = Cache(keysCacheUnencrypted, valuesCache, (100*100000)*10);
-    
+    cache = Cache(keysCacheUnencrypted, valuesCache, (100 * 100000) * 10);
 
     for (int i = 0; i < num_cores; i++)
     {
@@ -32,8 +63,6 @@ void nln_proxy::init(void **args)
     }
 
     threads_.push_back(std::thread(&nln_proxy::responder_thread, this));
-
-
 }
 
 void nln_proxy::async_get_batch(const sequence_id &seq_id, int queue_id, const std::vector<std::string> &keys)
@@ -48,7 +77,41 @@ void nln_proxy::async_get_batch(const sequence_id &seq_id, int queue_id, const s
     respond_queue_.push(std::make_pair(GET_BATCH, std::make_pair(seq_id, std::move(waiters))));
     sequence_queue_.push(seq_id);
 
-    //level_map_client_->get_batch(keys);
+    std::unordered_map<int, std::pair<std::vector<std::string>, std::vector<std::string>>> level_split;
+
+    for (int i = 0; i < keys.size(); i++)
+    {
+        int index = lookup_table->find(keys[i])->second;
+        auto slot = level_split.find(index);
+        // std::cout << strtol(_return[i].c_str(), &end, 10) << std::endl;
+        if (slot != level_split.end())
+        {
+
+            slot->second.first.push_back(keys[i]);
+        }
+        else
+        {
+            level_split.insert(std::make_pair(index, std::make_pair(std::vector<std::string>(), std::vector<std::string>())));
+            slot = level_split.find(index);
+            slot->second.first.push_back(keys[i]);
+        }
+    }
+
+    for (auto &it : level_split)
+        {
+          // Do stuff
+          // cout << it.first;
+
+          if (it.first < levels_len)
+          {
+            if (levels[it.first].exists)
+            {
+              levels_clients_[it.first]->get_batch(it.second.first);
+            }
+          }
+        }
+
+    // level_map_client_->get_batch(keys);
 };
 
 void nln_proxy::async_put_batch(const sequence_id &seq_id, int queue_id, const std::vector<std::string> &keys, const std::vector<std::string> &values)
@@ -89,13 +152,13 @@ std::future<std::string> nln_proxy::put_future(int queue_id, const std::string &
     return waiter;
 };
 
-void nln_proxy::insert_into_cache(const std::vector<std::string> &keys, const std::vector<std::string> &values) {
+void nln_proxy::insert_into_cache(const std::vector<std::string> &keys, const std::vector<std::string> &values)
+{
 
     for (int i = 0; i < keys.size(); i++)
     {
-            cache.insertIntoCache(keys[i], values[i]);
+        cache.insertIntoCache(keys[i], values[i]);
     }
-    
 }
 
 void nln_proxy::resolve_promise(std::shared_ptr<WaffleQueue::queue<std::pair<operation, std::shared_ptr<std::promise<std::string>>>>> &op_queue,
@@ -114,28 +177,26 @@ void nln_proxy::resolve_promise(std::shared_ptr<WaffleQueue::queue<std::pair<ope
         auto currentKey = operation_promise_pair.first.key;
 
         // TODO: waffle more or less handles this part synchronously. Needs to be integrated
-        // with asynchronous backend calls. Stall until we get data? works but seems wasteful. 
+        // with asynchronous backend calls. Stall until we get data? works but seems wasteful.
 
         if (operation_promise_pair.first.value == "")
         {
 
-
-                operation_promise_pair.second->set_value("test");
+            //operation_promise_pair.second->set_value("test");
 
             // TODO: actually call a backend server to get the values.
-            /*
+            
             bool isPresentInCache = false;
             auto val = cache.getValueWithoutPositionChangeNew(currentKey, isPresentInCache);
             if(isPresentInCache == true) {
                 operation_promise_pair.second->set_value(val);
             } else {
-                
+
                 // Push the operation back onto the queue and record a cache miss.
                 op_queue->push(operation_promise_pair);
-                
-                cacheMisses += 1;
-            } */
 
+                cacheMisses += 1;
+            } 
         }
         else
         {

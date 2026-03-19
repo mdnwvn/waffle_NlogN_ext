@@ -72,7 +72,7 @@ private:
     
 };
 
-class lookup_client : public nln_client
+/* class lookup_client : public nln_client
 {
 public:
     lookup_client(std::string host, int port, void **args);
@@ -83,7 +83,7 @@ private:
     std::vector<std::shared_ptr<level_client>> levels_clients_;
 
     void read_responses();
-};
+}; */
 
 
 

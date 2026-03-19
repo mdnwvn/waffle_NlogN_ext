@@ -62,14 +62,14 @@ nln_client::nln_client(std::string host, int port) : host(host), port(port)
   std::cout << "Client created " << std::endl;
 }
 
-lookup_client::lookup_client(std::string host, int port, void **args) : nln_client(host, port)
+/* lookup_client::lookup_client(std::string host, int port, void **args) : nln_client(host, port)
 {
 
   levels_clients_ = *(static_cast<std::vector<std::shared_ptr<level_client>> *>(args[0]));
 
   response_thread_ = new std::thread(&lookup_client::read_responses, this);
 }
-
+ */
 level_client::level_client(std::string host, int port, void **args) : nln_client(host, port)
 {
 
@@ -109,6 +109,7 @@ int64_t nln_client::get_client_id()
 //   client_->get_batch(_res, keys);
 // }
 
+/*
 void lookup_client::get_batch(const std::vector<std::string> &keys)
 {
   std::unique_lock<std::mutex> mlock(*m_mtx_);
@@ -127,6 +128,8 @@ void lookup_client::get_batch(const std::vector<std::string> &keys)
 
   pending_get_requests.insert(std::make_pair(seq_id_.client_seq_no, keys));
 }
+
+*/
 
 void level_client::get_batch(const std::vector<std::string> &keys)
 {
@@ -148,6 +151,7 @@ void level_client::get_batch(const std::vector<std::string> &keys)
   pending_get_requests.insert(std::make_pair(seq_id_.client_seq_no, keys));
 }
 
+/*
 void lookup_client::put_batch(const std::vector<std::string> &keys, const std::vector<std::string> &values)
 {
   std::unique_lock<std::mutex> mlock(*m_mtx_);
@@ -162,7 +166,7 @@ void lookup_client::put_batch(const std::vector<std::string> &keys, const std::v
   requests_->push(PUT_BATCH);
 
   pending_put_requests.insert(std::make_pair(seq_id_.client_seq_no, std::make_pair(keys, values)));
-}
+}*/
 
 // void nln_client::get_batch(const std::vector<std::string> &keys)
 //{
@@ -184,6 +188,8 @@ void nln_client::put_batch(const std::vector<std::string> &keys, const std::vect
 
   pending_put_requests.insert(std::make_pair(seq_id_.client_seq_no, std::make_pair(keys, values)));
 }
+
+/*
 
 void lookup_client::read_responses()
 {
@@ -279,6 +285,8 @@ void lookup_client::read_responses()
   }
 }
 
+*/
+
 void level_client::read_responses()
 {
   std::cout << "Client read responses is called " << std::endl;
@@ -296,12 +304,13 @@ void level_client::read_responses()
       auto found = pending_get_requests.find(id);
       if (found != pending_get_requests.end())
       {
-        std::cout << "LE -> " << _return[0] << " | " << id << " | " << type << " | " << found->second[0] << " | " << _return.size() << " " << found->second.size() << std::endl;
+        //std::cout << "LE -> " << _return[0] << " | " << id << " | " << type << " | " << found->second[0] << " | " << _return.size() << " " << found->second.size() << std::endl;
 
         proxy_->insert_into_cache(found->second, _return);
       }
       else
 
+        // Ideally we should never encounter a response that we werent expecting to receive. 
         std::cout << "LE -> " << _return[0] << " | " << id << " | " << type << " | Not pending?" << std::endl;
     }
     catch (apache::thrift::transport::TTransportException e)
