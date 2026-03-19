@@ -72,19 +72,5 @@ private:
     
 };
 
-/* class lookup_client : public nln_client
-{
-public:
-    lookup_client(std::string host, int port, void **args);
-    void get_batch(const std::vector<std::string> &keys);
-    void put_batch(const std::vector<std::string> &keys, const std::vector<std::string> &values);
-
-private:
-    std::vector<std::shared_ptr<level_client>> levels_clients_;
-
-    void read_responses();
-}; */
-
-
 
 #endif
