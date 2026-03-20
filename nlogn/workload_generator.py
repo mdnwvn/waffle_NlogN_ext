@@ -1,11 +1,10 @@
 import pathlib
 import math
-import seaborn as sns
-import matplotlib.pyplot as plt
-import numpy as np
 import subprocess
 import os
 import asyncio
+import random
+import string
 
 wafflePath = pathlib.Path("../waffle/bin/proxy_server").resolve()
 #waffleHost = "127.0.0.1"
@@ -13,7 +12,7 @@ waffleStartPort = 9090
 nlnLevelMapPort = 9080
 #
 redisHost = "127.0.0.1"
-redisPort = 6379
+redisPort = 7776
 
 
 # Class to help with managing waffle instances.
@@ -73,39 +72,34 @@ def getSize(path: str) -> int:
     return size
 
 
-def splitDB(path: str, size: int) -> int:
-    setCount: int = findPow2(size)
+def randomword(length):
+   letters = string.ascii_lowercase
+   return ''.join(random.choice(letters) for i in range(length))
 
+def randN(N):
+	min = pow(10, N-1)
+	max = pow(10, N) - 1
+	return random.randint(min, max)
+
+def splitDB(levels:int, size:int) -> int:
+    
     lookup = Set(-1)  # The level of the lookup table doesn't matter
 
     # Initialize t+1 temporary sets for setting up the database.
-    sets: [Set] = []
-    for i in range(0, setCount + 1):
+    sets: list[Set] = []
+    for i in range(0, levels + 1):
         sets.append(Set(i))
 
-    # // Debug and plotting code //
-    # print(setCount)
-    # print(sets[-1].level)
-    # sizes:[int] = []
+    for s, set in enumerate(sets):
 
-    # Open and parse the dataset tracefile
-    with open(path, mode="r") as db:
-        # records = db.readlines()
-        for record in db:
-            parts = record.split(" ")
-            sizebin = findPow2(len(str(parts[2]).strip()))
-
-            # Add the k-v pair to the appropriate level
-            sets[sizebin].append(parts[1], str(parts[2]).strip().ljust(2**sizebin, "█"))
-
-            # Add the key to the lookup set.
-            # We need to pad this otherwise we leak whether we've
-            # accessed a 1-digit or 2-digit level.
-            lookup.append(parts[1], str(sizebin).strip().ljust(4, "█"))
-
-            # // Debug and plotting code //
-            # print(f"{findPow2(len(parts[2]))} | {parts[2]}")
-            # sizes.append(findPow2(len(parts[2])))
+        for i in range (0, size):
+            key :str = f'key{randN(20)}'
+            
+            #sets[s].append(key, randomword(2**s))
+            sets[s].append(key, "test")
+            
+            lookup.append(key, str(s))
+        pass
 
     # Generate the tracefile for each level
     # TODO: Add a single dummy element for empty levels, either here or later, so waffle can generate the proper dummies.
@@ -119,6 +113,7 @@ def splitDB(path: str, size: int) -> int:
     with open(f"./NLNTraceFiles/level_map.txt", "w+", encoding="utf-8") as f:
         for t in lookup.records:
             f.write(f"SET {t['key']} {t['value']}\n")
+
 
     with open(f"./NLNTraceFiles/benchmark_workload_unshuffled.txt", "w+", encoding="utf-8") as f:
         for t in lookup.records:
@@ -137,8 +132,9 @@ def splitDB(path: str, size: int) -> int:
     # ax.set_yscale('log')
     # print("Writing plot to file.")
     # plt.savefig("./dbdistrib.png")
+    return levels
 
-    return setCount
+    
 
 
 def initNLN(sets: int):
@@ -149,6 +145,8 @@ def initNLN(sets: int):
         command=" ".join([str(wafflePath),
                 "-l",
                 str(levelMapPath),
+                "-b",
+                "2500",
                 "-r",
                 "800",
                 "-f",
@@ -190,12 +188,15 @@ def initNLN(sets: int):
                                 str(wafflePath),
                                 "-l",
                                 str(levelPath),
+                                "-b",
+                                "2500",
                                 "-r",
-                                "800",
+                                "1000",
                                 "-f",
-                                "100",
+                                "500",
                                 "-d",
-                                str(2 ** (sets + 1 - i) - len(fp.readlines())),
+                                #str(2 ** (sets + 1 - i) - len(fp.readlines())),
+                                "350000",
                                 "-c",
                                 "2",
                                 "-n",
@@ -203,7 +204,7 @@ def initNLN(sets: int):
                                 "-h",
                                 redisHost,
                                 "-p",
-                                str(redisPort),
+                                str(redisPort + i),
                                 "-0",
                                 str(waffleStartPort + i),
                             ]),
@@ -220,16 +221,13 @@ if __name__ == "__main__":
 
     # Input tracefile path
     # dbPath = pathlib.Path("./DBTraceFiles/serverInput.txt").resolve()
-    dbPath = pathlib.Path(
-        "../waffle/tracefiles/0.99/workloadc/proxy_server_command_line_input.txt"
-    ).resolve()
 
-    dbSize: int = getSize(dbPath)  # Get the size of the database in bytes
-    sets: int = splitDB(dbPath, dbSize)  # Split the DB into logN levels
+    sets: int = splitDB(1, 200000)  # Split the DB into logN levels
 
-    levelMap = initNLN(sets)  # Initialize each Waffle instance
+    levelMap = initNLN(1)  # Initialize each Waffle instance
 
-    levelsHost = "10.10.153.115"
+    levelMapPath = pathlib.Path("./NLNTraceFiles/level_map.txt").resolve()
+    levelsHost = "127.0.0.1"
 
     with open("./nln_level_commands.txt","w+") as f:
         f.write(f"{levelMap.command}\n")
@@ -251,6 +249,7 @@ struct levels_entry {
     bool exists;
     int port;
 };\n""")
+        f.write(f'const std::string           lookup_table_path = "{levelMapPath}";\n')
 
         f.write(f'const std::string           levels_host = "{levelsHost}";\n')
         f.write(f"const struct levels_entry   levels_map = {{.exists = true, .port = {nlnLevelMapPort}}};")

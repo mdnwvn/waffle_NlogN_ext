@@ -183,7 +183,7 @@ std::shared_ptr<std::unordered_map<std::string, int>> parse_lookup() {
 
 int main(int argc, char **argv)
 {
-  int port = 9090;
+  int port = 9000;
   int num_threads = 4;
 
   std::shared_ptr<nln_proxy> proxy_ = std::make_shared<nln_proxy>();

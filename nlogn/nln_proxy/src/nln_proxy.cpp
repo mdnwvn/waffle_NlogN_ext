@@ -82,6 +82,7 @@ void nln_proxy::async_get_batch(const sequence_id &seq_id, int queue_id, const s
     for (int i = 0; i < keys.size(); i++)
     {
         int index = lookup_table->find(keys[i])->second;
+        //std::cout << index <<std::endl;
         auto slot = level_split.find(index);
         // std::cout << strtol(_return[i].c_str(), &end, 10) << std::endl;
         if (slot != level_split.end())
